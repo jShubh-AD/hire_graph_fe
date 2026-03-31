@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Outfit", system-ui, sans-serif;
+  --color-primary: #8b5cf6; /* purple-500 */
+  --color-primary-dark: #7c3aed; /* purple-600 */
+  --color-success: #14b8a6; /* teal-500 */
+  --color-warning: #f59e0b; /* amber-500 */
+}
+
+body {
+  @apply bg-white text-gray-900 antialiased;
+}
+
+#root {
+  @apply w-full h-full min-h-screen flex flex-col;
+}

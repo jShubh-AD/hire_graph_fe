@@ -31,7 +31,7 @@ const getScoreColor = (score) => {
 };
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return 'Recently';
+  if (!dateStr) return '';
   const posted = new Date(dateStr);
   const now = new Date();
   const diffMs = now - posted;
@@ -77,12 +77,7 @@ const JobCard = ({ job, index = 0, status }) => {
   const rawScore = job.score || job.matchScore || job.match_score || 0;
   let score = rawScore <= 1 ? Math.round(rawScore * 100) : Math.round(rawScore);
   
-  // Handled missing score for saved/applied jobs with a stable fallback
-  if (score === 0 && (status || job.is_saved || job.is_applied)) {
-    const hash = jobId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    score = 85 + (hash % 12); // Pledges 85% to 97%
-  }
-  const companyName = job.company_name || job.company || 'Unknown Company';
+  const companyName = job.company_name || job.company || '';
   const skills = job.skills || [];
   
   const displayPay = job.pay_min 
@@ -184,10 +179,22 @@ const JobCard = ({ job, index = 0, status }) => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-500">{companyName}</span>
-            <span className="w-1 h-1 rounded-full bg-gray-300" />
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-surface border border-border text-gray-600 font-medium">
-              {job.job_type || job.type || 'Full-time'}
-            </span>
+            {(job.job_type || job.type) && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-gray-300" />
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-surface border border-border text-gray-600 font-medium">
+                  {job.job_type || job.type}
+                </span>
+              </>
+            )}
+            {job.duration && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-gray-300" />
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-surface border border-border text-gray-600 font-medium">
+                  {job.duration}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -198,8 +205,12 @@ const JobCard = ({ job, index = 0, status }) => {
           <DollarSign size={12} className="text-primary" />
         </div>
         <span className="text-sm">{displayPay}</span>
-        <span className="text-gray-300 text-xs mx-1">/</span>
-        <span className="text-xs text-gray-500 font-normal">Remote / On-site</span>
+        {job.location && (
+          <>
+            <span className="text-gray-300 text-xs mx-1">/</span>
+            <span className="text-xs text-gray-500 font-normal">{job.location}</span>
+          </>
+        )}
       </div>
 
       {/* Footer Meta */}
@@ -208,14 +219,21 @@ const JobCard = ({ job, index = 0, status }) => {
           <Clock size={14} />
           <span className="text-[12px] font-medium">{formatDate(job.date_posted || job.datePosted)}</span>
         </div>
-        <div className={`px-3 py-1 rounded-full text-[12px] font-bold shadow-sm animate-countUp flex items-center gap-1.5 ${getScoreColor(score)}`}>
-          <div className="w-2 h-2 rounded-full bg-white opacity-40 animate-pulse" />
-          {score}% Match
+        <div className="flex items-center gap-1.5 flex-wrap justify-end max-w-full">
+          {skills.map((skill, idx) => {
+            const skillName = typeof skill === 'object' ? (skill.name || skill.skill_name || skill.skill || '') : skill;
+            if (!skillName) return null;
+            return (
+              <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface border border-border text-gray-500 uppercase tracking-tight">
+                {skillName}
+              </span>
+            );
+          })}
         </div>
       </div>
 
       {/* Action Button */}
-      <button
+      <button 
         onClick={handleApply}
         disabled={isApplied || isReported || isApplying}
         className={`w-full py-2.5 rounded-[10px] font-semibold text-[14px] transition-all flex items-center justify-center gap-2 ${

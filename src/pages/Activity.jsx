@@ -34,7 +34,7 @@ const Activity = () => {
   }, [activeTab]);
 
   return (
-    <div className="max-w-6xl mx-auto pb-24">
+    <div className="max-w-7xl mx-auto pb-24 px-4">
       {/* Header Section */}
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fadeInUp">
         <div>
@@ -90,7 +90,7 @@ const Activity = () => {
       {/* Content Grid */}
       <div className="animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <div 
                 key={n} 
@@ -110,7 +110,7 @@ const Activity = () => {
             ))}
           </div>
         ) : jobs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
             {jobs.map((job, idx) => (
               <JobCard key={job.jobId || job.id} job={job} index={idx} status={activeTab} />
             ))}

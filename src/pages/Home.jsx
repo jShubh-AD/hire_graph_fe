@@ -55,7 +55,7 @@ const Home = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-20 px-4">
+    <div className="max-w-7xl mx-auto pb-20 px-4">
       <div className="flex flex-col gap-6 mb-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -65,18 +65,6 @@ const Home = () => {
             <p className="text-gray-500 font-medium text-[15px] max-w-2xl leading-relaxed">
               Discover opportunities precisely matched to your unique skill graph.
             </p>
-          </div>
-
-          <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-border shadow-[0_2px_8px_rgba(108,71,255,0.05)]">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Match Accuracy</span>
-              <span className="text-sm font-black text-primary">Ultra-High</span>
-            </div>
-            <div className="w-[1px] h-8 bg-border" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Algorithm</span>
-              <span className="text-sm font-black text-dark">Proprietary GSQL</span>
-            </div>
           </div>
         </div>
       </div>
@@ -91,7 +79,7 @@ const Home = () => {
       )}
 
       {jobs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {jobs.map((job, idx) => (
             <JobCard key={job.jobId || job.id} job={job} index={idx} />
           ))}

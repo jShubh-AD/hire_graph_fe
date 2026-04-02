@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, FileText, User, LogOut, Briefcase } from 'lucide-react';
+import { Home, FileText, User, LogOut, Briefcase, Search, History } from 'lucide-react';
 
-const Sidebar = ({ setIsAuthenticated }) => {
+const Sidebar = ({ setIsAuthenticated, isMobile = false }) => {
   const navigate = useNavigate();
   const userString = localStorage.getItem('user');
   let user = {};
@@ -20,66 +20,94 @@ const Sidebar = ({ setIsAuthenticated }) => {
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
-    { name: 'Resume & Skills', path: '/resume', icon: FileText },
+    { name: 'Explore', path: '/jobs', icon: Search },
+    { name: 'Activity', path: '/activity', icon: History },
+    { name: 'Resume', path: '/resume', icon: FileText },
     { name: 'Profile', path: '/profile', icon: User },
   ];
 
+  if (isMobile) {
+    return (
+      <nav className="flex items-center justify-around w-full h-full px-2">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center transition-all px-3 py-1 rounded-lg ${
+                isActive ? 'text-primary scale-110' : 'text-gray-400'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+            )}
+          </NavLink>
+        ))}
+        <button onClick={handleLogout} className="text-gray-400 px-3 py-1">
+          <LogOut size={22} />
+        </button>
+      </nav>
+    );
+  }
+
   return (
-    <aside className="w-[240px] bg-gray-50 flex flex-col justify-between h-full p-4 shrink-0 transition-all">
-      <div>
+    <aside className="w-[260px] bg-white border-r border-border flex flex-col justify-between h-full shrink-0 transition-all z-40">
+      <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="flex items-center gap-3 px-2 mb-8 mt-2 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="bg-purple-600 text-white p-2 rounded-xl shadow-lg shadow-purple-600/30">
-            <Briefcase size={22} />
+        <div className="flex items-center gap-3 px-6 py-8 cursor-pointer group" onClick={() => navigate('/')}>
+          <div className="bg-primary text-white p-2 rounded-xl shadow-[0_0_12px_rgba(108,71,255,0.15)] group-hover:scale-105 transition-transform">
+            <Briefcase size={22} strokeWidth={2.5} />
           </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">
+          <span className="text-xl font-bold tracking-tight text-dark">
             GraphHire
           </span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex flex-col gap-2">
+        <nav className="flex flex-col px-3 gap-1 flex-1">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 rounded-xl transition-all font-medium ${
+                `group flex items-center gap-3 px-4 py-3 rounded-[10px] transition-all relative font-medium text-[14px] ${
                   isActive
-                    ? 'bg-purple-100 text-purple-700 shadow-sm'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 hover:scale-[1.02]'
+                    ? 'bg-primary/5 text-primary'
+                    : 'text-gray-500 hover:text-dark hover:bg-gray-50'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <item.icon size={20} className={isActive ? 'text-purple-600' : 'text-gray-400'} />
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-primary rounded-r-full" />
+                  )}
+                  <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-primary' : 'text-gray-400 group-hover:text-dark'} />
                   <span>{item.name}</span>
                 </>
               )}
             </NavLink>
           ))}
         </nav>
-      </div>
 
-      {/* User Section bottom */}
-      <div className="pt-4 border-t border-gray-200 mt-4">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-teal-400 flex items-center justify-center text-white font-bold shrink-0 shadow-md">
-              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+        {/* User Section bottom */}
+        <div className="p-4 bg-surface/50 border-t border-border mx-3 mb-6 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0 text-sm shadow-sm">
+              {user.name ? user.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) : 'U'}
             </div>
-            <div className="truncate flex-1">
-              <p className="text-sm font-semibold text-gray-900 truncate">{user.name || 'User'}</p>
-              <p className="text-xs text-gray-500 truncate">{user.email || 'user@example.com'}</p>
+            <div className="truncate flex-1 min-w-0">
+              <p className="text-sm font-semibold text-dark truncate leading-tight">{user.name || 'User'}</p>
+              <p className="text-[11px] text-gray-500 truncate mt-0.5">{user.email || 'user@example.com'}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1"
-            title="Log out"
+            className="w-full mt-4 flex items-center justify-center gap-2 py-2 text-[12px] font-semibold text-gray-500 hover:text-danger bg-white border border-border rounded-[10px] shadow-sm hover:shadow-gray-100/50 transition-all"
           >
-            <LogOut size={18} />
+            <LogOut size={14} />
+            <span>Sign Out</span>
           </button>
         </div>
       </div>

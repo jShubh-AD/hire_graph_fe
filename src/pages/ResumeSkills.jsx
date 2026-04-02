@@ -1,17 +1,36 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { api } from '../api';
 import SkillEntry from '../components/SkillEntry';
 import SkillChip from '../components/SkillChip';
 import { UploadCloud, FileText, CheckCircle, X, Sparkles, User, BadgeAlert } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
 
 const ResumeSkills = () => {
+  const { profileData, skillsLibrary, fetchProfile } = useOutletContext();
   const [skills, setSkills] = useState([]);
   const [resumeFile, setResumeFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [parsedSkills, setParsedSkills] = useState([]);
+  const [bio, setBio] = useState('');
   const fileInputRef = useRef(null);
+
+  // Sync profile data from context
+  useEffect(() => {
+    if (profileData) {
+      if (profileData.skills) {
+        const mapped = profileData.skills.map(s => ({
+          id: s.skill_id,
+          name: s.skill_name || `Skill ${s.skill_id}`,
+          proficiency: Math.round(s.proficiency * 5) || 1,
+          category: 'technical'
+        }));
+        setSkills(mapped);
+      }
+      if (profileData.bio) setBio(profileData.bio);
+    }
+  }, [profileData]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -50,11 +69,21 @@ const ResumeSkills = () => {
         }
       }
 
-      const mappedSkills = (res.data || []).map(s => ({
-        name: s.skill || s.name, 
-        proficiency: s.proficiency <= 1 ? Math.round(s.proficiency * 5) || 1 : s.proficiency,
-        category: 'other'
-      }));
+      const mappedSkills = (res.data.skills || res.data || []).map(s => {
+        const pName = s.skill || s.name;
+        // Attempt to find matching ID in library
+        const match = skillsLibrary.find(
+          lib => lib.name.toLowerCase() === pName.toLowerCase()
+        );
+        
+        return {
+          id: match ? match.id : null, 
+          name: match ? match.name : pName, 
+          proficiency: Math.round((s.proficiency || 0.5) * 5) || 1,
+          category: 'technical',
+          unmatched: !match // Flag for UI if needed
+        };
+      });
       setParsedSkills(mappedSkills);
       setMessage({ type: 'success', text: 'Resume parsed successfully!' });
     } catch (err) {
@@ -68,10 +97,15 @@ const ResumeSkills = () => {
     const newSkills = [...skills];
     // Add non-duplicates
     parsedSkills.forEach(ps => {
-      if (!newSkills.some(s => s.name.toLowerCase() === ps.name.toLowerCase())) {
+      // Only add if it has an ID (backend requires it) and not already present
+      if (ps.id && !newSkills.some(s => s.id === ps.id)) {
         newSkills.push(ps);
       }
     });
+
+    if (newSkills.length === skills.length && parsedSkills.some(p => !p.id)) {
+      setMessage({ type: 'error', text: 'Some skills could not be matched to our library. Please add them manually.' });
+    }
 
     setSkills(newSkills);
     setParsedSkills([]);
@@ -93,57 +127,63 @@ const ResumeSkills = () => {
 
     try {
       const payload = { 
-        skills: skills.map(s => ({ skill: s.name, proficiency: s.proficiency / 5 })) 
+        skills: skills.map(s => ({ 
+          skill_id: s.id, 
+          proficiency: s.proficiency / 5 
+        })),
+        bio // Explicitly include bio if we have it
       };
       await api.post('/user/profile', payload);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
-    } catch (error) {
-      // Offline fallback
-      if (!error.response) {
-         setMessage({ type: 'success', text: 'Demo: Profile updated successfully (Backend offline).' });
-      } else {
-         setMessage({ type: 'error', text: 'Failed to save skills. Please try again.' });
+      // Refresh global state
+      await fetchProfile();
+      if (typeof fetchRecommendations === 'function') {
+        await fetchRecommendations();
       }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to save skills. Please try again.' });
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-12">
-      <div className="mb-10 text-center">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex justify-center items-center gap-3">
-          <User size={28} className="text-purple-600" />
-          Setup your Profile
+    <div className="max-w-4xl mx-auto pb-32">
+      <div className="mb-12 text-center">
+        <div className="inline-flex p-3 bg-primary/10 rounded-2xl text-primary mb-4">
+          <User size={32} strokeWidth={2.5} />
+        </div>
+        <h1 className="text-3xl font-bold text-dark tracking-tight">
+          Setup your <span className="text-primary">Skill Graph</span>
         </h1>
-        <p className="text-gray-500 font-medium mt-2 max-w-lg mx-auto">
-          Add your skills below so we can accurately match you to your ideal job.
+        <p className="text-gray-500 font-medium mt-3 max-w-lg mx-auto leading-relaxed">
+          The more we know about your expertise, the more precise our graph-powered matching becomes.
         </p>
       </div>
 
       {message.text && (
-         <div className={`p-4 rounded-2xl mb-8 flex items-center gap-3 font-semibold shadow-sm ${
-           message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+         <div className={`p-4 rounded-2xl mb-10 flex items-center gap-3 font-semibold shadow-sm animate-fadeInUp ${
+           message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-200'
          }`}>
-           {message.type === 'success' ? <CheckCircle size={20} className="text-green-500 shrink-0" /> : <BadgeAlert size={20} className="text-red-500 shrink-0" />}
-           {message.text}
+           {message.type === 'success' ? <CheckCircle size={20} className="text-emerald-500 shrink-0" /> : <BadgeAlert size={20} className="text-red-500 shrink-0" />}
+           <span className="text-sm">{message.text}</span>
          </div>
       )}
 
-      {/* SECTION 1: Resume Upload */}
-      <section className="bg-white p-6 sm:p-10 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 mb-8 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
-          <FileText size={150} className="text-purple-600 rotate-12" />
+      {/* SECTION 1: AI Parsing */}
+      <section className="bg-white p-8 sm:p-12 rounded-[2rem] border border-border shadow-[0_8px_30px_rgba(108,71,255,0.03)] mb-10 relative overflow-hidden group">
+        <div className="absolute -top-12 -right-12 p-8 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
+          <FileText size={280} className="text-primary -rotate-12" />
         </div>
         
-        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <Sparkles className="text-amber-500" size={24} /> 
-          AI Resume Parsing
+        <h2 className="text-xl font-bold text-dark mb-8 flex items-center gap-3">
+          <Sparkles className="text-warning" size={24} /> 
+          Graph AI Import
         </h2>
         
-        <div className="flex flex-col sm:flex-row items-center gap-6 z-10 relative">
+        <div className="flex flex-col lg:flex-row items-stretch gap-8 z-10 relative">
           <div 
-            className="w-full sm:w-1/2 min-h-40 border-2 border-dashed border-gray-300 hover:border-purple-400 bg-gray-50 hover:bg-purple-50 rounded-2xl flex flex-col items-center justify-center p-6 text-center transition-colors cursor-pointer"
+            className="w-full lg:w-3/5 min-h-48 border-2 border-dashed border-border hover:border-primary/40 bg-surface hover:bg-white rounded-[1.5rem] flex flex-col items-center justify-center p-8 text-center transition-all cursor-pointer group/upload shadow-inner"
             onClick={() => fileInputRef.current?.click()}
           >
             <input 
@@ -155,72 +195,80 @@ const ResumeSkills = () => {
             />
             
             {resumeFile ? (
-              <div className="flex flex-col items-center gap-2">
-                 <FileText size={40} className="text-purple-500" />
-                 <p className="font-semibold text-gray-800">{resumeFile.name}</p>
-                 <span className="text-xs text-gray-400 bg-white px-2 py-0.5 rounded border">
+              <div className="flex flex-col items-center gap-3">
+                 <div className="p-4 bg-primary text-white rounded-2xl shadow-lg shadow-primary/20">
+                    <FileText size={32} />
+                 </div>
+                 <p className="font-bold text-dark mt-2">{resumeFile.name}</p>
+                 <span className="text-[11px] font-black text-primary bg-primary/5 px-3 py-1 rounded-full uppercase tracking-widest border border-primary/10">
                    Click to change
                  </span>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2">
-                 <div className="p-3 bg-white rounded-full shadow-sm mb-2 text-gray-400">
-                    <UploadCloud size={24} />
+              <div className="flex flex-col items-center gap-3">
+                 <div className="p-4 bg-white rounded-2xl shadow-sm mb-2 text-gray-300 group-hover/upload:text-primary transition-colors">
+                    <UploadCloud size={32} strokeWidth={2.5} />
                  </div>
-                 <p className="font-semibold text-purple-700">Click to upload PDF</p>
-                 <p className="text-xs text-gray-500">Extracts skills & experience instantly</p>
+                 <p className="font-bold text-dark text-lg">Upload Resume PDF</p>
+                 <p className="text-sm text-gray-500 font-medium">Auto-detect skills from your experience</p>
               </div>
             )}
           </div>
           
-          <div className="w-full sm:w-1/2 flex flex-col justify-center items-center sm:items-start gap-4">
+          <div className="w-full lg:w-2/5 flex flex-col justify-center items-center lg:items-start gap-6">
             <button 
               onClick={handleUploadResume}
               disabled={!resumeFile || isUploading}
-              className="px-6 py-3 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 active:scale-95 transition-all shadow-md shadow-purple-600/30 disabled:opacity-50 w-full sm:w-auto flex justify-center items-center h-12"
+              className="px-10 py-4 rounded-[10px] font-bold bg-primary text-white hover:bg-primary-dark active:scale-[0.98] transition-all shadow-xl shadow-primary/20 disabled:opacity-30 w-full flex justify-center items-center h-16 text-[15px]"
             >
               {isUploading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : 'Analyze Resume'}
+                <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : 'Analyze Experience'}
             </button>
-            <p className="text-sm text-gray-400 text-center sm:text-left leading-relaxed">
-              We'll parse your resume for key skills using AI so you don't have to type them all out.
+            <p className="text-xs text-gray-400 text-center lg:text-left leading-relaxed font-medium">
+              We'll use our graph-trained models to extract nodes and relationships from your career history.
             </p>
           </div>
         </div>
 
         {/* Parsed Result Preview */}
         {parsedSkills.length > 0 && (
-          <div className="mt-8 p-6 bg-purple-50/50 rounded-2xl border border-purple-100 animate-in fade-in slide-in-from-bottom-4">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-purple-800 mb-4 opacity-70">
-              Extracted Skills
+          <div className="mt-10 p-8 bg-surface rounded-[1.5rem] border border-border animate-fadeInUp">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6">
+              Extracted Graph Nodes
             </h3>
-            <div className="flex flex-wrap gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-8">
               {parsedSkills.map((ps, idx) => (
                 <SkillChip key={idx} skill={ps} />
               ))}
             </div>
             <button 
               onClick={handleConfirmParsed}
-              className="flex items-center gap-2 bg-purple-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-purple-700 shadow-sm"
+              className="flex items-center gap-3 bg-white text-primary border-primary border hover:bg-primary hover:text-white px-8 py-3 rounded-[10px] font-bold transition-all shadow-sm group"
             >
-               <CheckCircle size={18} /> Confirm & Add to Profile
+               <CheckCircle size={18} className="group-hover:scale-110 transition-transform" /> 
+               <span>Connect to Profile</span>
             </button>
           </div>
         )}
       </section>
 
       {/* SECTION 2: Manual Skills */}
-      <section className="bg-white p-6 sm:p-10 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Your Skills</h2>
+      <section className="bg-white p-8 sm:p-12 rounded-[2rem] border border-border shadow-[0_8px_30px_rgba(108,71,255,0.03)]">
+        <h2 className="text-xl font-bold text-dark mb-10">Your Professional Arsenal</h2>
         
-        <div className="mb-8 relative z-10">
-          <SkillEntry onAdd={handleAddSkill} existingSkills={skills} />
+        <div className="mb-10">
+          <SkillEntry 
+            onAdd={handleAddSkill} 
+            existingSkills={skills} 
+            allSkills={skillsLibrary}
+            isLoading={!skillsLibrary.length && !profileData} 
+          />
         </div>
 
-        <div className="min-h-32 p-6 bg-gray-50 rounded-2xl border border-gray-200 flex flex-col justify-between items-start mb-8 transition-all relative z-0">
+        <div className="min-h-40 p-8 bg-surface rounded-[2rem] border border-border flex flex-col justify-start items-start mb-10 transition-all relative">
           {skills.length > 0 ? (
-            <div className="flex flex-wrap gap-3 w-full items-start">
+            <div className="flex flex-wrap gap-3 w-full">
               {skills.map((skill, idx) => (
                 <SkillChip 
                   key={idx} 
@@ -230,28 +278,42 @@ const ResumeSkills = () => {
               ))}
             </div>
           ) : (
-             <div className="w-full flex-1 flex flex-col items-center justify-center py-6">
-                <div className="bg-gray-100 p-4 rounded-full mb-3 text-gray-300">
-                  <X size={32} />
+             <div className="w-full flex-1 flex flex-col items-center justify-center py-10 opacity-40">
+                <div className="p-4 rounded-2xl mb-4 text-gray-300">
+                  <X size={40} strokeWidth={2.5} />
                 </div>
-                <p className="text-sm font-semibold text-gray-400 text-center">No skills added yet.</p>
-                <p className="text-xs text-gray-400 text-center mt-1">Upload your resume or add them manually.</p>
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest text-center">No connections found</p>
+                <p className="text-xs text-gray-500 font-medium text-center mt-2">Start by importing your resume or searching above.</p>
              </div>
           )}
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-gray-100">
+        {/* Save Bar: Desktop version */}
+        <div className="hidden sm:flex justify-end pt-10 border-t border-border">
           <button 
             onClick={handleSaveAll}
             disabled={skills.length === 0 || isSaving}
-            className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold bg-gray-900 text-white hover:bg-gray-800 active:scale-95 transition-all shadow-lg shadow-gray-900/20 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+            className="flex items-center gap-3 px-12 py-4 rounded-[10px] font-bold bg-dark text-white hover:bg-black active:scale-[0.98] transition-all shadow-xl shadow-gray-900/10 disabled:opacity-30 disabled:cursor-not-allowed text-[15px]"
           >
             {isSaving ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : 'Save All Skills'}
+              <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : 'Update Global Profile'}
           </button>
         </div>
       </section>
+
+      {/* STICKY BOTTOM BAR FOR MOBILE */}
+      <div className="sm:hidden fixed bottom-16 left-0 right-0 p-4 z-40 bg-white/80 backdrop-blur-md border-t border-border animate-in slide-in-from-bottom-full duration-300">
+        <button 
+          onClick={handleSaveAll}
+          disabled={skills.length === 0 || isSaving}
+          className="w-full h-14 bg-dark text-white font-bold rounded-[10px] flex items-center justify-center gap-3 shadow-xl"
+        >
+          {isSaving ? (
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : 'Save Changes'}
+        </button>
+      </div>
     </div>
   );
 };

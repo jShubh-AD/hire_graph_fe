@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import JobCard from '../components/JobCard';
-import { Search, Filter, Briefcase, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
 
 const MOCK_JOBS = [
-  { id: 1, title: 'Frontend Developer Intern', company: 'TechCorp', type: 'Internship', payRange: '$40-50/hr', duration: '12 weeks', matchScore: 92, datePosted: '2 days ago' },
-  { id: 2, title: 'Full Stack Engineer', company: 'StartupX', type: 'Full-time', payRange: '$120k-150k', duration: 'Permanent', matchScore: 85, datePosted: 'Just now' },
-  { id: 3, title: 'React UI Developer', company: 'DesignStudio', type: 'Part-time', payRange: '$60/hr', duration: '6 months', matchScore: 78, datePosted: '1 week ago' },
-  { id: 4, title: 'Machine Learning Engineer', company: 'AI Labs', type: 'Full-time', payRange: '$150k-200k', duration: 'Permanent', matchScore: 60, datePosted: '3 days ago' },
-  { id: 5, title: 'DevOps Intern', company: 'CloudBase', type: 'Internship', payRange: '$35/hr', duration: '6 months', matchScore: 45, datePosted: '1 month ago' },
+  { jobId: 'm1', title: 'Frontend Developer Intern', company_name: 'TechCorp', job_type: 'Internship', pay_min: 40, pay_max: 50, duration: '12 weeks', score: 92, date_posted: '2 days ago' },
+  { jobId: 'm2', title: 'Full Stack Engineer', company_name: 'StartupX', job_type: 'Full-time', pay_min: 120, pay_max: 150, duration: 'Permanent', score: 85, date_posted: 'Just now' },
+  { jobId: 'm3', title: 'React UI Developer', company_name: 'DesignStudio', job_type: 'Part-time', pay_min: 60, pay_max: 80, duration: '6 months', score: 78, date_posted: '1 week ago' },
+  { jobId: 'm4', title: 'Machine Learning Engineer', company_name: 'AI Labs', job_type: 'Full-time', pay_min: 150, pay_max: 200, duration: 'Permanent', score: 60, date_posted: '3 days ago' },
 ];
 
 const Jobs = () => {
@@ -19,12 +18,11 @@ const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Filter states
+  // Filter states mapped to backend parameter names: job_type, pay_min, duration
   const [filters, setFilters] = useState({
-    type: searchParams.get('type') || '',
-    payMin: searchParams.get('pay_min') || '',
+    job_type: searchParams.get('job_type') || '',
+    pay_min: searchParams.get('pay_min') || '',
     duration: searchParams.get('duration') || '',
-    datePosted: searchParams.get('date_posted') || '',
   });
 
   const [showFilters, setShowFilters] = useState(false);
@@ -33,25 +31,20 @@ const Jobs = () => {
     const fetchJobs = async () => {
       setIsLoading(true);
       try {
-        const queryParams = new URLSearchParams({
-          q,
-          ...filters
-        });
-        
-        // Remove empty filters
-        for (const [key, value] of queryParams.entries()) {
-          if (!value) queryParams.delete(key);
-        }
+        const queryParams = new URLSearchParams();
+        // Note: backend doesn't support 'q' yet, but we'll keep it for future-proofing or local filtering
+        if (q) queryParams.set('q', q);
+        if (filters.job_type) queryParams.set('job_type', filters.job_type);
+        if (filters.pay_min) queryParams.set('pay_min', filters.pay_min);
+        if (filters.duration) queryParams.set('duration', filters.duration);
 
         const res = await api.get(`/jobs/search?${queryParams.toString()}`);
         setJobs(res.data.jobs || res.data || []);
       } catch (err) {
-        // Fallback or demo
         console.log('Using demo job data', err);
-        // Simple mock filtering logic for demo
         const filtered = MOCK_JOBS.filter(job => {
-          if (q && !job.title.toLowerCase().includes(q.toLowerCase()) && !job.company.toLowerCase().includes(q.toLowerCase())) return false;
-          if (filters.type && !job.type.toLowerCase().includes(filters.type.toLowerCase())) return false;
+          if (q && !job.title.toLowerCase().includes(q.toLowerCase()) && !job.company_name.toLowerCase().includes(q.toLowerCase())) return false;
+          if (filters.job_type && job.job_type.toLowerCase() !== filters.job_type.toLowerCase()) return false;
           return true;
         });
         setJobs(filtered);
@@ -67,7 +60,6 @@ const Jobs = () => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
     
-    // Update URL but maintain 'q'
     const newParams = new URLSearchParams(searchParams);
     if (value) {
       newParams.set(name, value);
@@ -77,124 +69,123 @@ const Jobs = () => {
     setSearchParams(newParams);
   };
 
-  const handleSearchCommit = (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const query = fd.get('q');
-    
-    const newParams = new URLSearchParams(searchParams);
-    if (query) {
-      newParams.set('q', query);
-    } else {
-      newParams.delete('q');
-    }
-    setSearchParams(newParams);
+  const clearFilters = () => {
+    setSearchParams(new URLSearchParams());
+    setFilters({ job_type: '', pay_min: '', duration: '' });
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-12">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-            <Search size={28} className="text-purple-600" />
-            Explore Jobs
-          </h1>
-          <p className="text-gray-500 font-medium mt-2">
-            {q ? `Showing results for "${q}"` : 'Browse all available opportunities'}
-          </p>
+    <div className="max-w-7xl mx-auto pb-10 px-4">
+      <div className="flex flex-col gap-6 mb-8 mt-2">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 bg-purple-600 rounded-xl text-white shadow-lg shadow-purple-200/50">
+                <Search size={20} strokeWidth={3} />
+              </div>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+                Explore <span className="text-purple-600 uppercase">Opportunities</span>
+              </h1>
+            </div>
+            <p className="text-gray-500 font-bold text-sm leading-relaxed max-w-2xl">
+              Discover your next career milestone through our massive graph network. 
+              {q && <span className="text-purple-600 ml-1">Showing matches for "{q}"</span>}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-black transition-all border-2 text-xs uppercase tracking-tighter ${
+                showFilters 
+                  ? 'bg-purple-50 text-purple-700 border-purple-200 shadow-inner' 
+                  : 'bg-white border-gray-100 text-gray-700 hover:border-purple-200 hover:bg-purple-50/30'
+              }`}
+            >
+              <SlidersHorizontal size={16} strokeWidth={2.5} />
+              Filters
+            </button>
+          </div>
         </div>
-        
-        <button 
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all ${
-            showFilters 
-              ? 'bg-purple-100 text-purple-700 shadow-inner' 
-              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
-          }`}
-        >
-          <SlidersHorizontal size={18} />
-          Filters
-        </button>
+
+        {/* Global Search Bar */}
+        <div className="relative group max-w-2xl">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-purple-500 transition-colors">
+            <Search size={18} strokeWidth={3} />
+          </div>
+          <input
+            type="text"
+            placeholder="Role, company, or skills..."
+            value={q}
+            onChange={(e) => {
+              const newParams = new URLSearchParams(searchParams);
+              if (e.target.value) newParams.set('q', e.target.value);
+              else newParams.delete('q');
+              setSearchParams(newParams);
+            }}
+            className="w-full bg-white border-2 border-gray-100 py-3 pl-12 pr-6 rounded-2xl text-base font-bold text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/5 transition-all shadow-lg shadow-gray-200/20"
+          />
+        </div>
       </div>
 
       {/* Filter Bar */}
       {showFilters && (
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xl shadow-gray-200/50 mb-8 animate-in fade-in slide-in-from-top-4">
-          <form onSubmit={handleSearchCommit} className="mb-6 flex gap-3">
-            <div className="relative flex-1">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input 
-                name="q"
-                defaultValue={q}
-                placeholder="Search keywords..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
-              />
-            </div>
-            <button type="submit" className="bg-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-700 shadow-md">
-              Search
-            </button>
-          </form>
-
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xl shadow-gray-200/30 mb-6 animate-in fade-in slide-in-from-top-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Job Type</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Job Type</label>
               <select 
-                name="type" 
-                value={filters.type} 
+                name="job_type" 
+                value={filters.job_type} 
                 onChange={handleFilterChange}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none font-medium"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none font-bold text-xs"
               >
                 <option value="">Any Type</option>
-                <option value="full-time">Full-time</option>
-                <option value="part-time">Part-time</option>
-                <option value="internship">Internship</option>
-                <option value="contract">Contract</option>
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Internship">Internship</option>
+                <option value="Contract">Contract</option>
               </select>
             </div>
             
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Min Pay Range</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Min Pay ($/hr)</label>
               <select 
-                name="payMin" 
-                value={filters.payMin} 
+                name="pay_min" 
+                value={filters.pay_min} 
                 onChange={handleFilterChange}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none font-medium"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none font-bold text-xs"
               >
                 <option value="">Any Pay</option>
-                <option value="50k">$50k+</option>
-                <option value="100k">$100k+</option>
-                <option value="150k">$150k+</option>
+                <option value="30">30+</option>
+                <option value="50">50+</option>
+                <option value="80">80+</option>
+                <option value="120">120+</option>
               </select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Duration</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Duration</label>
               <select 
                 name="duration" 
                 value={filters.duration} 
                 onChange={handleFilterChange}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none font-medium"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none font-bold text-xs"
               >
                 <option value="">Any Duration</option>
-                <option value="permanent">Permanent</option>
-                <option value="contract">Contract (6+ mo)</option>
-                <option value="summer">Summer (10-12 wk)</option>
+                <option value="Permanent">Permanent</option>
+                <option value="Contract">Long-term (1y+)</option>
+                <option value="Short-term">Short-term (&lt; 6mo)</option>
               </select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Date Posted</label>
-              <select 
-                name="datePosted" 
-                value={filters.datePosted} 
-                onChange={handleFilterChange}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none font-medium"
+            <div className="flex items-end">
+              <button 
+                onClick={clearFilters}
+                className="w-full px-4 py-2 text-gray-500 hover:text-red-500 font-bold transition-colors flex items-center justify-center gap-2 text-xs"
               >
-                <option value="">Any Time</option>
-                <option value="24h">Past 24 hours</option>
-                <option value="7d">Past week</option>
-                <option value="30d">Past month</option>
-              </select>
+                <X size={14} /> Reset
+              </button>
             </div>
           </div>
         </div>
@@ -202,28 +193,28 @@ const Jobs = () => {
 
       {/* Results */}
       {isLoading ? (
-        <div className="py-20 flex justify-center">
-          <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+        <div className="py-20 flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin" />
+          <p className="text-gray-400 font-black animate-pulse uppercase tracking-widest text-[10px]">Scanning Graph Network...</p>
         </div>
       ) : jobs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 animate-in fade-in duration-500">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
+            <JobCard key={job.jobId || job.id} job={job} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 px-4 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50 flex flex-col items-center">
-          <Search size={48} className="text-gray-300 mb-4" />
-          <p className="text-gray-500 font-bold text-xl">No jobs match your criteria.</p>
-          <p className="text-gray-400 mt-2 font-medium">Try adjusting your filters or search terms.</p>
+        <div className="text-center py-24 px-4 border-2 border-dashed border-gray-200 rounded-[2.5rem] bg-gray-50/50 flex flex-col items-center">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+            <Search size={40} className="text-gray-300" />
+          </div>
+          <h3 className="text-gray-900 font-extrabold text-2xl">No matches found</h3>
+          <p className="text-gray-500 mt-2 font-medium max-w-xs mx-auto">We couldn't find any jobs matching your current filters. Try broader criteria.</p>
           <button 
-            onClick={() => {
-              setSearchParams(new URLSearchParams());
-              setFilters({ type: '', payMin: '', duration: '', datePosted: '' });
-            }}
-            className="mt-6 px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:text-purple-600 hover:border-purple-200 transition-all shadow-sm"
+            onClick={clearFilters}
+            className="mt-8 px-8 py-3 bg-gray-900 text-white rounded-2xl font-bold hover:bg-gray-800 transition-all shadow-xl shadow-gray-200 active:scale-95"
           >
-            Clear all filters
+            Show All Jobs
           </button>
         </div>
       )}

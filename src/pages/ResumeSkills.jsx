@@ -14,6 +14,7 @@ const ResumeSkills = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [parsedSkills, setParsedSkills] = useState([]);
   const [bio, setBio] = useState('');
+  const [analyzeStage, setAnalyzeStage] = useState('idle'); // 'idle', 'uploading', 'analyzing', 'extracting'
   const fileInputRef = useRef(null);
 
   // Sync profile data from context
@@ -34,62 +35,72 @@ const ResumeSkills = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.type === 'application/pdf') {
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('ONLY PDF files are supported for AI graph extraction.');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File is too large. Maximum size is 5MB.');
+        return;
+      }
       setResumeFile(file);
-    } else if (file) {
-      alert('Please upload a PDF file.');
     }
   };
 
   const handleUploadResume = async () => {
     if (!resumeFile) return;
+    
     setIsUploading(true);
+    setAnalyzeStage('uploading');
     setMessage({ type: '', text: '' });
 
     try {
       const formData = new FormData();
       formData.append('file', resumeFile);
       
-      // The API call returns 3 dummy skills based on instructions
-      let res;
-      try {
-        res = await api.post('/resume/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      } catch (err) {
-        // Fallback for Demo if backend unreachable
-        if (!err.response) {
-          res = { data: { skills: [
-            { name: 'JavaScript', proficiency: 4, category: 'frontend' },
-            { name: 'React', proficiency: 5, category: 'frontend' },
-            { name: 'Node.js', proficiency: 3, category: 'backend' }
-          ]}};
-        } else {
-          throw err;
-        }
-      }
+      // Stage 2: Simulating "Analyzing" (backend doesn't provide partials yet)
+      const timer = setTimeout(() => setAnalyzeStage('analyzing'), 800);
+      
+      const res = await api.post('/resume/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      clearTimeout(timer);
+      setAnalyzeStage('extracting');
+      
+      // Brief delay for "Extracting" stage readability
+      await new Promise(r => setTimeout(r, 600));
 
-      const mappedSkills = (res.data.skills || res.data || []).map(s => {
-        const pName = s.skill || s.name;
-        // Attempt to find matching ID in library
-        const match = skillsLibrary.find(
+      const rawSkills = res.data.skills || res.data || [];
+      const mappedSkills = rawSkills.map(s => {
+        const pName = s.skill || s.name || s.skillName;
+        // The backend auto-saves, but we match with library for UI badges
+        const match = (skillsLibrary || []).find(
           lib => lib.name.toLowerCase() === pName.toLowerCase()
         );
         
         return {
-          id: match ? match.id : null, 
+          id: match ? match.id : (s.skillId || s.id), 
           name: match ? match.name : pName, 
           proficiency: Math.round((s.proficiency || 0.5) * 5) || 1,
           category: 'technical',
-          unmatched: !match // Flag for UI if needed
+          unmatched: !match 
         };
       });
+
       setParsedSkills(mappedSkills);
-      setMessage({ type: 'success', text: 'Resume parsed successfully!' });
+      setMessage({ type: 'success', text: 'Resume analyzed and skill graph updated!' });
+      
+      // Auto-sync with profile since backend already saved HAS_SKILL edges
+      await fetchProfile();
+      
     } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to process resume. Please try again.' });
+      console.error('Resume error:', err);
+      setMessage({ type: 'error', text: err.response?.data?.detail || 'Failed to analyze resume. Please ensure it is a valid PDF.' });
     } finally {
       setIsUploading(false);
+      setAnalyzeStage('idle');
     }
   };
 
@@ -222,7 +233,14 @@ const ResumeSkills = () => {
               className="px-10 py-4 rounded-[10px] font-bold bg-primary text-white hover:bg-primary-dark active:scale-[0.98] transition-all shadow-xl shadow-primary/20 disabled:opacity-30 w-full flex justify-center items-center h-16 text-[15px]"
             >
               {isUploading ? (
-                <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="animate-pulse">
+                    {analyzeStage === 'uploading' ? 'Uploading PDF...' : 
+                     analyzeStage === 'analyzing' ? 'Analyzing Nodes...' : 
+                     'Extracting Skills...'}
+                  </span>
+                </div>
               ) : 'Analyze Experience'}
             </button>
             <p className="text-xs text-gray-400 text-center lg:text-left leading-relaxed font-medium">
@@ -243,11 +261,11 @@ const ResumeSkills = () => {
               ))}
             </div>
             <button 
-              onClick={handleConfirmParsed}
+              onClick={() => setParsedSkills([])} // Simply clear since sync happened automatically
               className="flex items-center gap-3 bg-white text-primary border-primary border hover:bg-primary hover:text-white px-8 py-3 rounded-[10px] font-bold transition-all shadow-sm group"
             >
                <CheckCircle size={18} className="group-hover:scale-110 transition-transform" /> 
-               <span>Connect to Profile</span>
+               <span>View Updated Profile</span>
             </button>
           </div>
         )}

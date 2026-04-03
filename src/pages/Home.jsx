@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import EmptyState from '../components/EmptyState';
+import JobDetailDrawer from '../components/JobDetailDrawer';
 import { Briefcase, AlertTriangle } from 'lucide-react';
 
 const MOCK_JOBS = [
@@ -12,32 +13,23 @@ const MOCK_JOBS = [
 
 const Home = () => {
   const { recommendations, profileData } = useOutletContext();
-  const [jobs, setJobs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasSkills, setHasSkills] = useState(true);
-  const [isOffline, setIsOffline] = useState(false);
+  // Derive data directly from context to avoid cascading renders
+  const jobs = recommendations 
+    ? (Array.isArray(recommendations) ? recommendations : (recommendations.jobs || []))
+    : [];
+  
+  const isLoading = !recommendations && !profileData;
+  
+  const hasSkills = profileData?.skills && profileData.skills.length > 0;
+  
+  // Drawer state
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    if (recommendations) {
-      const jobList = Array.isArray(recommendations) ? recommendations : (recommendations.jobs || []);
-      setJobs(jobList);
-      setIsLoading(false);
-      
-      // Check if user has skills from profileData which is also in context
-      if (profileData && (!profileData.skills || profileData.skills.length === 0)) {
-        setHasSkills(false);
-      } else {
-        setHasSkills(true);
-      }
-    } else if (profileData) {
-      // If profile exists but no recommendations yet, maybe it's still loading 
-      // or the user has no skills
-      if (!profileData.skills || profileData.skills.length === 0) {
-        setHasSkills(false);
-        setIsLoading(false);
-      }
-    }
-  }, [recommendations, profileData]);
+  const handleCardClick = (job) => {
+    setSelectedJob(job);
+    setIsDrawerOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -50,7 +42,7 @@ const Home = () => {
     );
   }
 
-  if (!hasSkills && !isOffline) {
+  if (!hasSkills) {
     return <EmptyState />;
   }
 
@@ -69,19 +61,11 @@ const Home = () => {
         </div>
       </div>
 
-      {isOffline && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-2xl mb-10 flex items-center gap-3 shadow-lg shadow-amber-200/10 font-bold text-sm mx-auto max-w-4xl">
-          <AlertTriangle size={20} className="text-amber-500 shrink-0" />
-          <div>
-            Backend is currently offline. Viewing cached demo recommendations.
-          </div>
-        </div>
-      )}
 
       {jobs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {jobs.map((job, idx) => (
-            <JobCard key={job.jobId || job.id} job={job} index={idx} />
+            <JobCard key={job.jobId || job.id} job={job} index={idx} onClick={() => handleCardClick(job)} />
           ))}
         </div>
       ) : (
@@ -98,6 +82,14 @@ const Home = () => {
           </button>
         </div>
       )}
+
+      {/* Global Job Detail Drawer */}
+      <JobDetailDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+        job={selectedJob}
+        profileData={profileData}
+      />
     </div>
   );
 };

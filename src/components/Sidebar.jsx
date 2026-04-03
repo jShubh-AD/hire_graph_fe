@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, FileText, User, LogOut, Briefcase, Search, History } from 'lucide-react';
+import { Home, FileText, User, LogOut, Briefcase, Search, History, Users } from 'lucide-react';
 
 const Sidebar = ({ setIsAuthenticated, isMobile = false }) => {
   const navigate = useNavigate();
@@ -7,7 +7,7 @@ const Sidebar = ({ setIsAuthenticated, isMobile = false }) => {
   let user = {};
   try {
     user = userString ? JSON.parse(userString) : {};
-  } catch (e) {
+  } catch {
     user = {};
   }
 
@@ -20,8 +20,8 @@ const Sidebar = ({ setIsAuthenticated, isMobile = false }) => {
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
-    { name: 'Explore', path: '/jobs', icon: Search },
     { name: 'Activity', path: '/activity', icon: History },
+    { name: 'Network', path: '/network', icon: Users },
     { name: 'Resume', path: '/resume', icon: FileText },
     { name: 'Profile', path: '/profile', icon: User },
   ];

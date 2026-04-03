@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import JobCard from '../components/JobCard';
+import JobDetailDrawer from '../components/JobDetailDrawer';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
 
 const MOCK_JOBS = [
   { jobId: 'm1', title: 'Frontend Developer Intern', company_name: 'TechCorp', job_type: 'Internship', pay_min: 40, pay_max: 50, duration: '12 weeks', score: 92, date_posted: '2 days ago' },
@@ -12,11 +14,21 @@ const MOCK_JOBS = [
 ];
 
 const Jobs = () => {
+  const { profileData } = useOutletContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') || '';
 
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Drawer state
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleCardClick = (job) => {
+    setSelectedJob(job);
+    setIsDrawerOpen(true);
+  };
   
   // Filter states mapped to backend parameter names: job_type, pay_min, duration
   const [filters, setFilters] = useState({
@@ -200,7 +212,7 @@ const Jobs = () => {
       ) : jobs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 animate-in fade-in duration-500">
           {jobs.map((job) => (
-            <JobCard key={job.jobId || job.id} job={job} />
+            <JobCard key={job.jobId || job.id} job={job} onClick={() => handleCardClick(job)} />
           ))}
         </div>
       ) : (
@@ -218,6 +230,14 @@ const Jobs = () => {
           </button>
         </div>
       )}
+
+      {/* Global Job Detail Drawer */}
+      <JobDetailDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+        job={selectedJob}
+        profileData={profileData}
+      />
     </div>
   );
 };

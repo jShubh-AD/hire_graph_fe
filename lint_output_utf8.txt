@@ -1,0 +1,62 @@
+﻿
+> graph_hire_fe@0.0.0 lint
+> eslint .
+
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\components\ReferralPathCard.jsx
+  5:68  error  'onSearchNetwork' is defined but never used  no-unused-vars
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\components\Sidebar.jsx
+  10:12  error  'e' is defined but never used  no-unused-vars
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\pages\Home.jsx
+  19:21  error  'setIsOffline' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  33:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  31 |     if (recommendations) {
+  32 |       const jobList = Array.isArray(recommendations) ? recommendations : (recommendations.jobs || []);
+> 33 |       setJobs(jobList);
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  34 |       setIsLoading(false);
+  35 |       
+  36 |       // Check if user has skills from profileData which is also in context  react-hooks/set-state-in-effect
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\pages\Login.jsx
+  26:16  error  'err' is defined but never used  no-unused-vars
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\pages\Network.jsx
+  6:11  error  'profileData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\pages\Profile.jsx
+  18:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  16 |     if (profileData) {
+  17 |       const { name, email, bio: serverBio, skills: serverSkills } = profileData;
+> 18 |       setUser({ name, email });
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  19 |       if (serverBio) setBio(serverBio);
+  20 |       
+  21 |       if (serverSkills) {  react-hooks/set-state-in-effect
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\pages\Register.jsx
+  32:16  error  'err' is defined but never used  no-unused-vars
+
+C:\Users\shubh_axozmtr\frontend projects\graph_hire_fe\src\pages\ResumeSkills.jsx
+  107:9   error  'handleConfirmParsed' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  152:15  error  'fetchRecommendations' is not defined                                                                no-undef
+  154:14  error  'error' is defined but never used                                                                    no-unused-vars
+
+Γ£û 11 problems (11 errors, 0 warnings)
+

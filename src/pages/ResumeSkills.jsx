@@ -6,7 +6,7 @@ import { UploadCloud, FileText, CheckCircle, X, Sparkles, User, BadgeAlert } fro
 import { useOutletContext } from 'react-router-dom';
 
 const ResumeSkills = () => {
-  const { profileData, skillsLibrary, fetchProfile } = useOutletContext();
+  const { profileData, skillsLibrary, fetchProfile, fetchRecommendations } = useOutletContext();
   const [skills, setSkills] = useState([]);
   const [resumeFile, setResumeFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -104,26 +104,6 @@ const ResumeSkills = () => {
     }
   };
 
-  const handleConfirmParsed = () => {
-    const newSkills = [...skills];
-    // Add non-duplicates
-    parsedSkills.forEach(ps => {
-      // Only add if it has an ID (backend requires it) and not already present
-      if (ps.id && !newSkills.some(s => s.id === ps.id)) {
-        newSkills.push(ps);
-      }
-    });
-
-    if (newSkills.length === skills.length && parsedSkills.some(p => !p.id)) {
-      setMessage({ type: 'error', text: 'Some skills could not be matched to our library. Please add them manually.' });
-    }
-
-    setSkills(newSkills);
-    setParsedSkills([]);
-    setResumeFile(null); // Clear upload
-    setMessage({ type: 'success', text: 'Skills extracted and added below.' });
-  };
-
   const handleAddSkill = (skill) => {
     setSkills([...skills, skill]);
   };
@@ -151,7 +131,7 @@ const ResumeSkills = () => {
       if (typeof fetchRecommendations === 'function') {
         await fetchRecommendations();
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to save skills. Please try again.' });
     } finally {
       setIsSaving(false);

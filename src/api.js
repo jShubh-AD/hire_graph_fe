@@ -33,3 +33,12 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Network & Referral API Methods
+export const networkApi = {
+  getFollowing: () => api.get('/friends/following'),
+  getSuggestions: () => api.get('/friends/suggestions'),
+  followUser: (targetUserId) => api.post(`/friends/follow/${targetUserId}`),
+  unfollowUser: (targetUserId) => api.delete(`/friends/unfollow/${targetUserId}`),
+  getReferralPath: (jobId) => api.get(`/jobs/${jobId}/referral-path`),
+};

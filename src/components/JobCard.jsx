@@ -11,6 +11,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { api } from '../api';
+import { useJobActions } from '../hooks/useJobActions';
 import ReportModal from './ReportModal';
 
 const getCompanyColor = (name) => {
@@ -24,11 +25,6 @@ const getCompanyColor = (name) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const getScoreColor = (score) => {
-  if (score >= 80) return 'bg-success text-white border-success';
-  if (score >= 50) return 'bg-warning text-white border-warning';
-  return 'bg-gray-400 text-white border-gray-400';
-};
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -44,14 +40,12 @@ const formatDate = (dateStr) => {
   return posted.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 };
 
-const JobCard = ({ job, index = 0, status }) => {
-  const [isSaved, setIsSaved] = useState(status === 'saved' || job.is_saved || false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isApplied, setIsApplied] = useState(status === 'applied' || job.is_applied || false);
-  const [isApplying, setIsApplying] = useState(false);
+const JobCard = ({ job, index = 0, status, onClick }) => {
+  const jobId = job.jobId || job.id;
+  const { isSaved, isSaving, isApplied, isApplying, handleSave: saveJob, handleApply: applyJob } = useJobActions(job);
+  
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isReported, setIsReported] = useState(status === 'reported' || job.is_flagged || false);
-  const [reportReason, setReportReason] = useState(job.report_reason || '');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -73,9 +67,6 @@ const JobCard = ({ job, index = 0, status }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const jobId = job.jobId || job.id;
-  const rawScore = job.score || job.matchScore || job.match_score || 0;
-  let score = rawScore <= 1 ? Math.round(rawScore * 100) : Math.round(rawScore);
   
   const companyName = job.company_name || job.company || '';
   const skills = job.skills || [];
@@ -86,35 +77,18 @@ const JobCard = ({ job, index = 0, status }) => {
 
   const handleSave = async (e) => {
     e.stopPropagation();
-    setIsSaving(true);
-    try {
-      await api.post(`/jobs/save/${jobId}`);
-      setIsSaved(true);
-    } catch (error) {
-      console.error('Error saving job:', error);
-    } finally {
-      setIsSaving(false);
-    }
+    await saveJob(jobId);
   };
-
+ 
   const handleApply = async (e) => {
     e.stopPropagation();
-    setIsApplying(true);
-    try {
-      await api.post(`/jobs/apply/${jobId}`);
-      setIsApplied(true);
-    } catch (error) {
-      console.error('Error applying to job:', error);
-    } finally {
-      setIsApplying(false);
-    }
+    await applyJob(jobId);
   };
 
   const handleReport = async (reason) => {
     try {
       await api.post(`/jobs/report/${jobId}?reason=${encodeURIComponent(reason)}`);
       setIsReported(true);
-      setReportReason(reason);
     } catch (error) {
       console.error('Error reporting job:', error);
     }
@@ -122,7 +96,8 @@ const JobCard = ({ job, index = 0, status }) => {
 
   return (
     <div 
-      className={`card-premium group relative flex flex-col p-5 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(108,71,255,0.1)] active:scale-[0.99] animate-fadeInUp stagger-${(index % 5) + 1} ${activeStatusStyle} ${isReported ? 'opacity-70 grayscale-[0.3]' : ''}`}
+      onClick={onClick}
+      className={`card-premium group relative flex flex-col p-5 cursor-pointer hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(108,71,255,0.1)] active:scale-[0.99] animate-fadeInUp stagger-${(index % 5) + 1} ${activeStatusStyle} ${isReported ? 'opacity-70 grayscale-[0.3]' : ''}`}
     >
       {/* Top Section: Avatar & Header */}
       <div className="flex items-start gap-4 mb-4">

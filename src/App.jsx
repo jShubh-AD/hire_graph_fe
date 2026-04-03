@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -10,6 +10,7 @@ import ResumeSkills from './pages/ResumeSkills';
 import Profile from './pages/Profile';
 import Jobs from './pages/Jobs';
 import Activity from './pages/Activity';
+import Network from './pages/Network';
 
 const ProtectedLayout = ({ setIsAuthenticated, profileData, skillsLibrary, recommendations, fetchProfile, fetchRecommendations }) => {
   return (
@@ -25,7 +26,13 @@ const ProtectedLayout = ({ setIsAuthenticated, profileData, skillsLibrary, recom
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="page-transition">
-            <Outlet context={{ profileData, skillsLibrary, recommendations, fetchProfile, fetchRecommendations }} />
+            <Outlet context={useMemo(() => ({ 
+              profileData, 
+              skillsLibrary, 
+              recommendations, 
+              fetchProfile, 
+              fetchRecommendations 
+            }), [profileData, skillsLibrary, recommendations, fetchProfile, fetchRecommendations])} />
           </div>
         </main>
       </div>
@@ -38,6 +45,8 @@ const ProtectedLayout = ({ setIsAuthenticated, profileData, skillsLibrary, recom
   );
 };
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 function App() {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -47,6 +56,8 @@ function App() {
   const [profileData, setProfileData] = useState(null);
   const [skillsLibrary, setSkillsLibrary] = useState([]);
   const [recommendations, setRecommendations] = useState(null);
+
+  const isInitializingRef = useRef(false);
 
   useEffect(() => {
     const handleAuthError = () => {
@@ -58,7 +69,7 @@ function App() {
     return () => window.removeEventListener('auth:unauthorized', handleAuthError);
   }, [navigate]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
@@ -83,9 +94,9 @@ function App() {
     } catch (err) {
       console.error('Profile fetch failed', err);
     }
-  };
+  }, []);
 
-  const fetchLibrary = async () => {
+  const fetchLibrary = useCallback(async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/skills`);
       if (res.ok) {
@@ -95,9 +106,9 @@ function App() {
     } catch (err) {
       console.error('Library fetch failed', err);
     }
-  };
+  }, []);
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
@@ -116,31 +127,46 @@ function App() {
     } catch (err) {
       console.error('Recommendations fetch failed', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const initialize = async () => {
+      if (isInitializingRef.current) return;
+      isInitializingRef.current = true;
+
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          await fetchProfile();
-          // Fetch additional data if authenticated
-          await Promise.all([
-            fetchLibrary(),
-            fetchRecommendations()
-          ]);
+          let hasProfile = !!profileData;
+          
+          if (!hasProfile) {
+            const data = await fetchProfile();
+            if (data) hasProfile = true;
+          }
+
+          if (hasProfile) {
+            // Fetch additional data if authenticated
+            await Promise.all([
+              skillsLibrary.length === 0 ? fetchLibrary() : Promise.resolve(),
+              !recommendations ? fetchRecommendations() : Promise.resolve()
+            ]);
+          } else {
+            if (skillsLibrary.length === 0) await fetchLibrary();
+          }
         } else {
-          await fetchLibrary();
+          if (skillsLibrary.length === 0) await fetchLibrary();
         }
       } catch (err) {
         console.error("Initialization failed", err);
       } finally {
         setIsValidating(false);
+        isInitializingRef.current = false;
       }
     };
     
     initialize();
-  }, [isAuthenticated]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, fetchProfile, fetchLibrary, fetchRecommendations]);
 
   if (isValidating) {
     return (
@@ -161,35 +187,38 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={!isAuthenticated ? <Login setAuth={setIsAuthenticated} /> : <Navigate to="/" replace />} />
-      <Route path="/register" element={!isAuthenticated ? <Register setAuth={setIsAuthenticated} /> : <Navigate to="/" replace />} />
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={!isAuthenticated ? <Login setAuth={setIsAuthenticated} /> : <Navigate to="/" replace />} />
+        <Route path="/register" element={!isAuthenticated ? <Register setAuth={setIsAuthenticated} /> : <Navigate to="/" replace />} />
 
-      {/* Protected Routes */}
-      <Route
-        element={
-          isAuthenticated ? (
-            <ProtectedLayout 
-              setIsAuthenticated={setIsAuthenticated} 
-              profileData={profileData} 
-              skillsLibrary={skillsLibrary}
-              recommendations={recommendations}
-              fetchProfile={fetchProfile}
-              fetchRecommendations={fetchRecommendations}
-            />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      >
-        <Route path="/" element={<Home />} />
-        <Route path="/resume" element={<ResumeSkills />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/activity" element={<Activity />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+        {/* Protected Routes */}
+        <Route
+          element={
+            isAuthenticated ? (
+              <ProtectedLayout 
+                setIsAuthenticated={setIsAuthenticated} 
+                profileData={profileData} 
+                skillsLibrary={skillsLibrary}
+                recommendations={recommendations}
+                fetchProfile={fetchProfile}
+                fetchRecommendations={fetchRecommendations}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        >
+          <Route path="/" element={<Home />} />
+          <Route path="/resume" element={<ResumeSkills />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/activity" element={<Activity />} />
+          <Route path="/network" element={<Network />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </ErrorBoundary>
   );
 }
 

@@ -23,7 +23,7 @@ const Login = ({ setAuth }) => {
       try {
         const profileRes = await api.get('/user/profile');
         localStorage.setItem('user', JSON.stringify(profileRes.data));
-      } catch (err) {
+      } catch {
         // Fallback if profile fetch fails
         localStorage.setItem('user', JSON.stringify({ email: formData.email }));
       }

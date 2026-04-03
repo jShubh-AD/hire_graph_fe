@@ -29,7 +29,7 @@ const Register = ({ setAuth }) => {
       try {
         const profileRes = await api.get('/user/profile');
         localStorage.setItem('user', JSON.stringify(profileRes.data));
-      } catch (err) {
+      } catch {
         localStorage.setItem('user', JSON.stringify({ name: formData.name, email: formData.email }));
       }
       

@@ -6,29 +6,31 @@ import { api } from '../api';
 
 const Profile = () => {
   const { profileData, fetchProfile, fetchRecommendations } = useOutletContext();
-  const [user, setUser] = useState({});
-  const [skills, setSkills] = useState([]);
-  const [bio, setBio] = useState('Passionate software engineer looking for exciting opportunities.');
+  // Derive user and skills directly from profileData to avoid cascading renders
+  const user = {
+    name: profileData?.name || '',
+    email: profileData?.email || ''
+  };
+
+  const skills = profileData?.skills ? profileData.skills.map(s => ({
+    id: s.skill_id,
+    name: s.skill_name || `Skill ${s.skill_id}`,
+    proficiency: Math.round((s.proficiency || 0) * 5) || 1,
+    category: s.category || 'Technical'
+  })) : [];
+
+  const [bio, setBio] = useState(profileData?.bio || 'Passionate software engineer looking for exciting opportunities.');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [graphStats, setGraphStats] = useState(null);
   
-  useEffect(() => {
-    if (profileData) {
-      const { name, email, bio: serverBio, skills: serverSkills } = profileData;
-      setUser({ name, email });
-      if (serverBio) setBio(serverBio);
-      
-      if (serverSkills) {
-        const mappedSkills = serverSkills.map(s => ({
-          id: s.skill_id,
-          name: s.skill_name || `Skill ${s.skill_id}`,
-          proficiency: Math.round((s.proficiency || 0) * 5) || 1,
-          category: s.category || 'Technical'
-        }));
-        setSkills(mappedSkills);
-      }
+  // Sync bio when profileData loads if not currently editing
+  const [prevProfileBio, setPrevProfileBio] = useState(profileData?.bio);
+  if (profileData?.bio !== prevProfileBio) {
+    setPrevProfileBio(profileData.bio);
+    if (!isEditingBio) {
+      setBio(profileData?.bio || '');
     }
-  }, [profileData]);
+  }
 
   useEffect(() => {
     const fetchGraphStats = async () => {
@@ -95,9 +97,6 @@ const Profile = () => {
           <div className="flex-1 pb-4 text-center md:text-left">
             <div className="flex flex-col md:flex-row md:items-center gap-4 mb-2">
               <h1 className="text-4xl font-black text-dark tracking-tight drop-shadow-sm">{user.name || 'User Profile'}</h1>
-              <div className="flex items-center gap-2 justify-center">
-                 <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full border border-primary/10">Active Contributor</span>
-              </div>
             </div>
             <div className="flex items-center gap-4 text-gray-500 font-bold text-sm justify-center md:justify-start">
                <div className="flex items-center gap-2">
@@ -113,9 +112,6 @@ const Profile = () => {
           </div>
 
           <div className="flex gap-3 pb-4">
-             <button className="p-4 bg-white border border-border rounded-2xl text-dark hover:bg-surface transition-all shadow-sm">
-                <Edit2 size={20} />
-             </button>
              <Link to="/resume" className="flex items-center gap-2 px-8 py-4 bg-dark text-white rounded-2xl font-bold shadow-xl shadow-gray-900/10 hover:scale-[1.02] active:scale-95 transition-all">
                 Update Skills
              </Link>

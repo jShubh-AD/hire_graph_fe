@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import JobCard from '../components/JobCard';
+import JobDetailDrawer from '../components/JobDetailDrawer';
 import EmptyState from '../components/EmptyState';
 import { Bookmark, Briefcase, AlertTriangle, History, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 
 const Activity = () => {
+  const { profileData } = useOutletContext();
   const [activeTab, setActiveTab] = useState('saved'); // 'saved', 'applied', 'reported'
   const [jobs, setJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Drawer state
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleCardClick = (job) => {
+    setSelectedJob(job);
+    setIsDrawerOpen(true);
+  };
 
   const tabs = [
     { id: 'saved', name: 'Saved', icon: Bookmark, count: null },
@@ -112,7 +123,13 @@ const Activity = () => {
         ) : jobs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
             {jobs.map((job, idx) => (
-              <JobCard key={job.jobId || job.id} job={job} index={idx} status={activeTab} />
+              <JobCard 
+                key={job.jobId || job.id} 
+                job={job} 
+                index={idx} 
+                status={activeTab} 
+                onClick={() => handleCardClick(job)}
+              />
             ))}
           </div>
         ) : (
@@ -135,6 +152,14 @@ const Activity = () => {
           </div>
         )}
       </div>
+
+      {/* Global Job Detail Drawer */}
+      <JobDetailDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+        job={selectedJob}
+        profileData={profileData}
+      />
     </div>
   );
 };

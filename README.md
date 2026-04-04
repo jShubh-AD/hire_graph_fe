@@ -1,16 +1,80 @@
-# React + Vite
+# GraphHire Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+GraphHire is a modern, graph-powered recruitment platform designed to connect talent with opportunities through intelligent relationship mapping and AI-driven skill extraction. This frontend application provides a seamless, interactive interface for candidates and recruiters, leveraging the power of TigerGraph for complex networking and recommendations.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **AI-Powered Resume Analysis**: Automatically extract technical skills and experience from PDF resumes.
+- **Graph-Based Networking**: Visualize professional connections and suggest relevant industry contacts.
+- **Intelligent Job Recommendations**: Personalized job matching based on verified skills and graph relationships.
+- **Skill Library Integration**: Seamless mapping of user expertise to a standardized skills ontology.
+- **Dynamic Dashboard**: Real-time insights into application status and network growth.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Core**: [React 19](https://react.dev/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Navigation**: [React Router 7](https://reactrouter.com/)
+- **API Client**: [Axios](https://axios-http.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
-## Expanding the ESLint configuration
+## 💻 Local Setup
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Follow these steps to get the development environment running on your local machine.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18.0.0 or higher recommended)
+- [npm](https://www.npmjs.com/) (usually comes with Node.js)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/jShubh-AD/hire_graph_fe.git
+   cd graph_hire_fe
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**
+   Create a `.env` file in the root directory (or copy from `.env.example` if available):
+   ```env
+   VITE_API_BASE_URL=http://localhost:8000
+   ```
+   *Note: Ensure your backend server is running at this address.*
+
+4. **Start the Development Server**
+   ```bash
+   npm run dev
+   ```
+   The application will be available at `http://localhost:5173`.
+
+### Building for Production
+
+To create an optimized production build:
+```bash
+npm run build
+```
+The output will be in the `dist/` folder.
+
+## 📁 Project Structure
+
+```text
+src/
+├── components/     # Reusable UI components (Drawers, Modals, Nav)
+├── pages/          # Full-page components (Home, Network, Profile)
+├── assets/         # Static assets (images, fonts)
+├── App.jsx         # Main application component & routes
+└── main.jsx        # Application entry point
+```
+
+## 🌐 Related Projects
+
+- **GraphHire Backend**: A FastAPI-based service utilizing TigerGraph for data storage and processing.
+
+---
